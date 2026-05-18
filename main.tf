@@ -150,7 +150,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   computer_name = "ubuntuvm"
   admin_ssh_key {
     username   = var.admin_username
-    public_key = var.public_key_path
+    public_key = var.public_key
   }
 
 

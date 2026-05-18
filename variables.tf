@@ -15,9 +15,11 @@ variable "vm_name" {
 }
 
 variable "admin_username" {
+  type    = string
   default = "azureuser"
 }
 
-variable "public_key_path" {
-  default = "azureuser"
+variable "public_key" {
+  type      = string
+  sensitive = true
 }
