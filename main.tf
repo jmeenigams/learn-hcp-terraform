@@ -11,25 +11,7 @@ provider "azurerm" {
   features {}
 }
 
-# -------------------------
-# VARIABLES
-# -------------------------
 
-variable "location" {
-  default = "West Europe"
-}
-
-variable "vm_size" {
-  default = "Standard_B1s"
-}
-
-variable "vm_name" {
-  default = "learn-hcp-terraform-vm"
-}
-
-variable "admin_username" {
-  default = "azureuser"
-}
 
 # -------------------------
 # RESOURCE GROUP
@@ -152,10 +134,6 @@ resource "azurerm_linux_virtual_machine" "vm" {
     azurerm_network_interface.nic.id
   ]
 
-  admin_ssh_key {
-    username   = var.admin_username
-    public_key = file("~/.ssh/id_rsa.pub")
-  }
 
   os_disk {
     caching              = "ReadWrite"
@@ -169,7 +147,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 
-  computer_name  = "ubuntuvm"
+  computer_name                   = "ubuntuvm"
   disable_password_authentication = true
 
   tags = {

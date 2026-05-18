@@ -1,11 +1,19 @@
-variable "instance_name" {
-  description = "Value of the EC2 instance's Name tag."
-  type        = string
-  default     = "learn-terraform"
+# -------------------------
+# VARIABLES
+# -------------------------
+
+variable "location" {
+  default = "West Europe"
 }
 
-variable "instance_type" {
-  description = "The EC2 instance's type."
-  type        = string
-  default     = "t2.micro"
+variable "vm_size" {
+  default = "Standard_B1s"
+}
+
+variable "vm_name" {
+  default = "learn-hcp-terraform-vm"
+}
+
+variable "admin_username" {
+  default = "azureuser"
 }
