@@ -147,7 +147,12 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 
-  computer_name                   = "ubuntuvm"
+  computer_name = "ubuntuvm"
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = file(var.public_key_path)
+  }
+
 
   tags = {
     Name = var.vm_name

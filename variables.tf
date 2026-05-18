@@ -17,3 +17,7 @@ variable "vm_name" {
 variable "admin_username" {
   default = "azureuser"
 }
+
+variable "public_key_path" {
+  default = "azureuser"
+}
