@@ -1,45 +1,178 @@
-provider "aws" {
-  region = "us-west-2"
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+  }
 }
 
-data "aws_availability_zones" "available" {
-  state = "available"
+provider "azurerm" {
+  features {}
 }
 
-data "aws_ami" "ubuntu" {
-  most_recent = true
+# -------------------------
+# VARIABLES
+# -------------------------
 
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
+variable "location" {
+  default = "West Europe"
+}
+
+variable "vm_size" {
+  default = "Standard_B1s"
+}
+
+variable "vm_name" {
+  default = "learn-hcp-terraform-vm"
+}
+
+variable "admin_username" {
+  default = "azureuser"
+}
+
+# -------------------------
+# RESOURCE GROUP
+# -------------------------
+
+resource "azurerm_resource_group" "rg" {
+  name     = "learn-hcp-terraform-rg"
+  location = var.location
+}
+
+# -------------------------
+# VNET
+# -------------------------
+
+resource "azurerm_virtual_network" "vnet" {
+  name                = "learn-hcp-terraform-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+# -------------------------
+# SUBNETS
+# -------------------------
+
+resource "azurerm_subnet" "private_subnet_1" {
+  name                 = "private-subnet-1"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.0.1.0/24"]
+}
+
+resource "azurerm_subnet" "private_subnet_2" {
+  name                 = "private-subnet-2"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+resource "azurerm_subnet" "public_subnet" {
+  name                 = "public-subnet"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.0.101.0/24"]
+}
+
+# -------------------------
+# NETWORK SECURITY GROUP
+# -------------------------
+
+resource "azurerm_network_security_group" "nsg" {
+  name                = "learn-hcp-terraform-nsg"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  security_rule {
+    name                       = "AllowSSH"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+# -------------------------
+# PUBLIC IP
+# -------------------------
+
+resource "azurerm_public_ip" "public_ip" {
+  name                = "learn-hcp-terraform-pip"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+
+# -------------------------
+# NETWORK INTERFACE
+# -------------------------
+
+resource "azurerm_network_interface" "nic" {
+  name                = "learn-hcp-terraform-nic"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.private_subnet_1.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.public_ip.id
+  }
+}
+
+# -------------------------
+# NSG ASSOCIATION
+# -------------------------
+
+resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
+  network_interface_id      = azurerm_network_interface.nic.id
+  network_security_group_id = azurerm_network_security_group.nsg.id
+}
+
+# -------------------------
+# UBUNTU VM
+# -------------------------
+
+resource "azurerm_linux_virtual_machine" "vm" {
+  name                = var.vm_name
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  size                = var.vm_size
+
+  admin_username = var.admin_username
+
+  network_interface_ids = [
+    azurerm_network_interface.nic.id
+  ]
+
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = file("~/.ssh/id_rsa.pub")
   }
 
-  owners = ["099720109477"] # Canonical
-}
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
 
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "5.19.0"
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "ubuntu-24_04-lts"
+    sku       = "server"
+    version   = "latest"
+  }
 
-  name = "learn-hcp-terraform"
-  cidr = "10.0.0.0/16"
-
-  azs             = data.aws_availability_zones.available.names
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
-  public_subnets  = ["10.0.101.0/24"]
-
-  enable_dns_hostnames = true
-}
-
-
-resource "aws_instance" "app_server" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = var.instance_type
-
-  vpc_security_group_ids = [module.vpc.default_security_group_id]
-  subnet_id              = module.vpc.private_subnets[0]
+  computer_name  = "ubuntuvm"
+  disable_password_authentication = true
 
   tags = {
-    Name = var.instance_name
+    Name = var.vm_name
   }
 }
