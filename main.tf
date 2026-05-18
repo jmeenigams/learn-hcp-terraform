@@ -148,7 +148,6 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 
   computer_name                   = "ubuntuvm"
-  disable_password_authentication = true
 
   tags = {
     Name = var.vm_name
