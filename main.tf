@@ -123,6 +123,7 @@ resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
 # -------------------------
 
 resource "azurerm_linux_virtual_machine" "vm" {
+
   name                = var.vm_name
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
@@ -134,6 +135,12 @@ resource "azurerm_linux_virtual_machine" "vm" {
     azurerm_network_interface.nic.id
   ]
 
+  disable_password_authentication = true
+
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = var.public_key
+  }
 
   os_disk {
     caching              = "ReadWrite"
@@ -148,11 +155,6 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 
   computer_name = "ubuntuvm"
-  admin_ssh_key {
-    username   = var.admin_username
-    public_key = var.public_key
-  }
-
 
   tags = {
     Name = var.vm_name
