@@ -18,3 +18,8 @@ output "instance_private_subnet_2" {
 output "instance_public_subnet" {
   value = azurerm_subnet.public_subnet.id
 }
+
+ output "instance_VM" {
+   description = "Image used to create the VM instance."
+   value       = azurerm_linux_virtual_machine.vm.id
+ }
